@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Fee Calculator</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f0f2f5;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    .card {
+      background: white;
+      border-radius: 12px;
+      padding: 36px;
+      width: 420px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    }
+
+    h2 {
+      font-size: 1.4rem;
+      color: #1a1a2e;
+      margin-bottom: 24px;
+    }
+
+    label {
+      display: block;
+      font-size: 0.85rem;
+      color: #555;
+      margin-bottom: 6px;
+      margin-top: 16px;
+    }
+
+    input, select {
+      width: 100%;
+      padding: 10px 14px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      outline: none;
+      transition: border 0.2s;
+    }
+
+    input:focus, select:focus {
+      border-color: #4f46e5;
+    }
+
+    button {
+      margin-top: 24px;
+      width: 100%;
+      padding: 12px;
+      background: #4f46e5;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    button:hover { background: #4338ca; }
+
+    .result {
+      margin-top: 24px;
+      background: #f8f9ff;
+      border: 1px solid #e0e0f0;
+      border-radius: 8px;
+      padding: 16px;
+      display: none;
+    }
+
+    .result h3 {
+      font-size: 0.9rem;
+      color: #888;
+      margin-bottom: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .result-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 6px 0;
+      font-size: 0.95rem;
+      color: #333;
+      border-bottom: 1px solid #eee;
+      gap: 12px;
+    }
+
+    .result-row span:last-child {
+      text-align: right;
+      word-break: break-all;
+    }
+
+    .result-row:last-child {
+      border-bottom: none;
+      font-weight: 600;
+      color: #1a1a2e;
+      font-size: 1rem;
+    }
+
+    .error {
+      margin-top: 16px;
+      color: #dc2626;
+      font-size: 0.9rem;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>Fee Calculation</h2>
+
+    <label for="amount">Transaction Amount</label>
+    <input type="number" id="amount" placeholder="e.g. 100.000" step="0.001" min="0.001" />
+
+    <label for="type">Transaction Type</label>
+    <select id="type">
+      <option value="P2P">P2P</option>
+      <option value="ME2ME_SAME_CURRENCY">Me2Me – Same Currency</option>
+      <option value="ME2ME_CROSS_CURRENCY">Me2Me – Cross Currency</option>
+    </select>
+
+    <button onclick="calculate()">Calculate Fee</button>
+
+    <div class="error" id="error"></div>
+
+    <div class="result" id="result">
+      <h3>Breakdown</h3>
+      <div class="result-row">
+        <span>Principal Amount</span>
+        <span id="principal"></span>
+      </div>
+      <div class="result-row">
+        <span>Commission</span>
+        <span id="commission"></span>
+      </div>
+      <div class="result-row">
+        <span>Total Debit</span>
+        <span id="totalDebit"></span>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    async function calculate() {
+      const amount = document.getElementById('amount').value;
+      const type = document.getElementById('type').value;
+      const errorEl = document.getElementById('error');
+      const resultEl = document.getElementById('result');
+
+      errorEl.style.display = 'none';
+      resultEl.style.display = 'none';
+
+      if (!amount || amount <= 0) {
+        showError('Please enter a valid transaction amount.');
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/transfers/calculate-fee', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            transactionAmount: parseFloat(parseFloat(amount).toFixed(3)),
+            transactionType: type
+          })
+        });
+
+        if (!res.ok) {
+          const text = await res.text();
+          showError('Error: ' + text);
+          return;
+        }
+
+        const data = await res.json();
+        document.getElementById('principal').textContent = fmt(data.principalAmount);
+        document.getElementById('commission').textContent = fmt(data.commissionAmount);
+        document.getElementById('totalDebit').textContent = fmt(data.totalDebit);
+        resultEl.style.display = 'block';
+
+      } catch (e) {
+        showError('Could not reach the server.');
+      }
+    }
+
+    function fmt(val) {
+      return new Intl.NumberFormat('en-US', { minimumFractionDigits: 3, maximumFractionDigits: 3 }).format(val);
+    }
+
+    function showError(msg) {
+      const el = document.getElementById('error');
+      el.textContent = msg;
+      el.style.display = 'block';
+    }
+  </script>
+</body>
+</html>
