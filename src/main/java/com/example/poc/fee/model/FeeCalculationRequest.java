@@ -1,4 +1,4 @@
-package com.example.poc.fee;
+package com.example.poc.fee.model;
 
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;

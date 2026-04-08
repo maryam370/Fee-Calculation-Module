@@ -1,5 +1,7 @@
-package com.example.poc.fee;
+package com.example.poc.fee.service;
 
+import com.example.poc.fee.model.FeeResult;
+import com.example.poc.fee.model.TransactionType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -15,7 +17,10 @@ public class FeeCalculationService {
     private static final int SCALE = 3;
     private static final RoundingMode ROUNDING = RoundingMode.HALF_UP;
 
-   
+    /**
+     * Global fee percentage configured by admin.
+     * Expressed as a decimal: 0.01 = 1%, 0.015 = 1.5%
+     */
     @Value("${fee.percentage}")
     private BigDecimal feePercentage;
 
@@ -24,10 +29,6 @@ public class FeeCalculationService {
      *
      * P2P                  → commission = transactionAmount × feePercentage
      * Me2Me (any currency) → commission = 0 (fee-free per BRD)
-     *
-     * @param transactionAmount amount the user wants to send
-     * @param transactionType   P2P, ME2ME_SAME_CURRENCY, or ME2ME_CROSS_CURRENCY
-     * @return FeeResult with principalAmount, commissionAmount, and totalDebit
      */
     public FeeResult calculateFeeAndTotal(BigDecimal transactionAmount, TransactionType transactionType) {
         log.info("Calculating fee for type={} amount={}", transactionType, transactionAmount);
@@ -48,7 +49,6 @@ public class FeeCalculationService {
         }
 
         BigDecimal totalDebit = principal.add(commission);
-
         log.info("Fee result: principal={} commission={} totalDebit={}", principal, commission, totalDebit);
 
         return new FeeResult(principal, commission, totalDebit);

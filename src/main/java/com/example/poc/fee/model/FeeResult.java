@@ -1,4 +1,4 @@
-package com.example.poc.fee;
+package com.example.poc.fee.model;
 
 import java.math.BigDecimal;
 

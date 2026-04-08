@@ -1,5 +1,8 @@
 package com.example.poc.fee;
 
+import com.example.poc.fee.model.FeeResult;
+import com.example.poc.fee.model.TransactionType;
+import com.example.poc.fee.service.FeeCalculationService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -15,7 +18,6 @@ class FeeCalculationServiceTest {
     @BeforeEach
     void setUp() {
         service = new FeeCalculationService();
-        // Simulates admin-configured value: 0.01 = 1%
         ReflectionTestUtils.setField(service, "feePercentage", new BigDecimal("0.01"));
     }
 
@@ -46,7 +48,6 @@ class FeeCalculationServiceTest {
 
     @Test
     void p2p_roundingPrecision_shouldRoundHalfUp() {
-        // 33.333 * 0.01 = 0.33333 → rounds to 0.333
         FeeResult result = service.calculateFeeAndTotal(new BigDecimal("33.333"), TransactionType.P2P);
 
         assertEquals(new BigDecimal("0.333"), result.getCommissionAmount());

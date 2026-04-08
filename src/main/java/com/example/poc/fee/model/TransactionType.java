@@ -1,4 +1,4 @@
-package com.example.poc.fee;
+package com.example.poc.fee.model;
 
 public enum TransactionType {
     P2P,

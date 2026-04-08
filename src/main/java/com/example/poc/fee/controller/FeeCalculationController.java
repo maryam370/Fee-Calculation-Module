@@ -1,5 +1,8 @@
-package com.example.poc.fee;
+package com.example.poc.fee.controller;
 
+import com.example.poc.fee.model.FeeCalculationRequest;
+import com.example.poc.fee.model.FeeResult;
+import com.example.poc.fee.service.FeeCalculationService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
