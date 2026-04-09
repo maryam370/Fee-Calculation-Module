@@ -20,25 +20,27 @@ public class FeeCalculationController {
     @Value("${fee.percentage}")
     private BigDecimal feePercentage;
 
+    @Value("${fee.spread.percentage}")
+    private BigDecimal spreadPercentage;
+
     public FeeCalculationController(FeeCalculationService feeCalculationService) {
         this.feeCalculationService = feeCalculationService;
     }
 
-    // GET /api/transfers/fee-config — returns the admin-configured fee percentage
+    // GET /api/transfers/fee-config — returns the admin-configured fee and spread percentages
     @GetMapping("/fee-config")
     public ResponseEntity<Map<String, Object>> getFeeConfig() {
         return ResponseEntity.ok(Map.of(
                 "feePercentage", feePercentage,
-                "displayPercentage", feePercentage.multiply(new BigDecimal("100")).stripTrailingZeros().toPlainString() + "%"
+                "displayFeePercentage", feePercentage.multiply(new BigDecimal("100")).stripTrailingZeros().toPlainString() + "%",
+                "spreadPercentage", spreadPercentage,
+                "displaySpreadPercentage", spreadPercentage.multiply(new BigDecimal("100")).stripTrailingZeros().toPlainString() + "%"
         ));
     }
 
     @PostMapping("/calculate-fee")
     public ResponseEntity<FeeResult> calculateFee(@Valid @RequestBody FeeCalculationRequest request) {
-        FeeResult result = feeCalculationService.calculateFeeAndTotal(
-                request.getTransactionAmount(),
-                request.getTransactionType()
-        );
+        FeeResult result = feeCalculationService.calculateFeeAndTotal(request);
         return ResponseEntity.ok(result);
     }
 }

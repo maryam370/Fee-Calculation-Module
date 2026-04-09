@@ -20,7 +20,7 @@
       background: white;
       border-radius: 12px;
       padding: 36px;
-      width: 420px;
+      width: 440px;
       box-shadow: 0 4px 20px rgba(0,0,0,0.08);
     }
 
@@ -48,9 +48,17 @@
       transition: border 0.2s;
     }
 
-    input:focus, select:focus {
-      border-color: #4f46e5;
+    input:focus, select:focus { border-color: #4f46e5; }
+
+    .currency-row {
+      display: flex;
+      gap: 12px;
     }
+
+    .currency-row > div { flex: 1; }
+
+    /* hide currency fields when not cross-currency */
+    .fx-fields { display: none; }
 
     button {
       margin-top: 24px;
@@ -122,11 +130,35 @@
     <input type="number" id="amount" placeholder="e.g. 100.000" step="0.001" min="0.001" />
 
     <label for="type">Transaction Type</label>
-    <select id="type">
+    <select id="type" onchange="onTypeChange()">
       <option value="P2P">P2P</option>
       <option value="ME2ME_SAME_CURRENCY">Me2Me – Same Currency</option>
       <option value="ME2ME_CROSS_CURRENCY">Me2Me – Cross Currency</option>
     </select>
+
+    <!-- shown only for cross-currency -->
+    <div class="fx-fields" id="fxFields">
+      <div class="currency-row">
+        <div>
+          <label for="fromCurrency">From Currency</label>
+          <select id="fromCurrency">
+            <option value="USD">USD</option>
+            <option value="BHD">BHD</option>
+            <option value="EUR">EUR</option>
+            <option value="GBP">GBP</option>
+          </select>
+        </div>
+        <div>
+          <label for="toCurrency">To Currency</label>
+          <select id="toCurrency">
+            <option value="BHD">BHD</option>
+            <option value="USD">USD</option>
+            <option value="EUR">EUR</option>
+            <option value="GBP">GBP</option>
+          </select>
+        </div>
+      </div>
+    </div>
 
     <button onclick="calculate()">Calculate Fee</button>
 
@@ -137,6 +169,14 @@
       <div class="result-row">
         <span>Principal Amount</span>
         <span id="principal"></span>
+      </div>
+      <div class="result-row" id="rateRow" style="display:none">
+        <span>Exchange Rate</span>
+        <span id="exchangeRate"></span>
+      </div>
+      <div class="result-row" id="spreadRow" style="display:none">
+        <span>Spread</span>
+        <span id="spread"></span>
       </div>
       <div class="result-row">
         <span>Commission</span>
@@ -150,6 +190,12 @@
   </div>
 
   <script>
+    function onTypeChange() {
+      const type = document.getElementById('type').value;
+      document.getElementById('fxFields').style.display =
+        type === 'ME2ME_CROSS_CURRENCY' ? 'block' : 'none';
+    }
+
     async function calculate() {
       const amount = document.getElementById('amount').value;
       const type = document.getElementById('type').value;
@@ -164,13 +210,29 @@
         return;
       }
 
+      // Determine currencies based on type
+      let fromCurrency, toCurrency;
+      if (type === 'ME2ME_CROSS_CURRENCY') {
+        fromCurrency = document.getElementById('fromCurrency').value;
+        toCurrency = document.getElementById('toCurrency').value;
+        if (fromCurrency === toCurrency) {
+          showError('From and To currencies must be different for cross-currency transfers.');
+          return;
+        }
+      } else {
+        fromCurrency = 'BHD';
+        toCurrency = 'BHD';
+      }
+
       try {
         const res = await fetch('/api/transfers/calculate-fee', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             transactionAmount: parseFloat(parseFloat(amount).toFixed(3)),
-            transactionType: type
+            transactionType: type,
+            fromCurrency: fromCurrency,
+            toCurrency: toCurrency
           })
         });
 
@@ -181,9 +243,22 @@
         }
 
         const data = await res.json();
-        document.getElementById('principal').textContent = fmt(data.principalAmount);
+        const isCross = type === 'ME2ME_CROSS_CURRENCY';
+
+        document.getElementById('principal').textContent = fmt(data.principalAmount) + ' ' + fromCurrency;
         document.getElementById('commission').textContent = fmt(data.commissionAmount);
-        document.getElementById('totalDebit').textContent = fmt(data.totalDebit);
+        document.getElementById('totalDebit').textContent = fmt(data.totalDebit) + ' ' + fromCurrency;
+
+        document.getElementById('rateRow').style.display = isCross ? 'flex' : 'none';
+        document.getElementById('spreadRow').style.display = isCross ? 'flex' : 'none';
+
+        if (isCross) {
+          document.getElementById('exchangeRate').textContent =
+            '1 ' + fromCurrency + ' = ' + data.exchangeRateUsed + ' ' + toCurrency;
+          document.getElementById('spread').textContent =
+            (data.spreadPercentage * 100).toFixed(2) + '%';
+        }
+
         resultEl.style.display = 'block';
 
       } catch (e) {
