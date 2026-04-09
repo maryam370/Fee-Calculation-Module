@@ -46,7 +46,6 @@ public class FeeCalculationController {
         return ResponseEntity.ok(fxRateService.getCacheStatus());
     }
 
-    // POST /api/transfers/calculate-fee
     @PostMapping("/calculate-fee")
     public ResponseEntity<FeeResult> calculateFee(@Valid @RequestBody FeeCalculationRequest request) {
         FeeResult result = feeCalculationService.calculateFeeAndTotal(request);

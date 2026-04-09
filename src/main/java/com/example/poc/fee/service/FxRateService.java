@@ -93,9 +93,7 @@ public class FxRateService {
         return new BigDecimal(rateObj.toString());
     }
 
-    /**
-     * Returns cache status for all cached currency pairs.
-     */
+  
     public Map<String, Object> getCacheStatus() {
         Map<String, Object> status = new java.util.LinkedHashMap<>();
         if (cache.isEmpty()) {
