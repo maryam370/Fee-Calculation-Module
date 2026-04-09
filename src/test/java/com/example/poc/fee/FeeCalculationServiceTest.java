@@ -13,7 +13,9 @@ import org.springframework.test.util.ReflectionTestUtils;
 import java.math.BigDecimal;
 
 import static org.junit.jupiter.api.Assertions.*;
+import com.example.poc.fee.service.FxRateUnavailableException;
 import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.when;
 
 class FeeCalculationServiceTest {
 
@@ -23,9 +25,14 @@ class FeeCalculationServiceTest {
     @BeforeEach
     void setUp() {
         repository = mock(TransactionFeeRepository.class);
-        service = new FeeCalculationService(new FxRateService(), repository);
+        FxRateService fxRateService = mock(FxRateService.class);
+        service = new FeeCalculationService(fxRateService, repository);
         ReflectionTestUtils.setField(service, "feePercentage", new BigDecimal("0.01"));
         ReflectionTestUtils.setField(service, "spreadPercentage", new BigDecimal("0.005"));
+
+        // Mock FX responses
+        when(fxRateService.getCustomerRate("USD", "BHD")).thenReturn(new BigDecimal("0.379"));
+        when(fxRateService.getCustomerRate("BHD", "BHD")).thenReturn(BigDecimal.ONE);
     }
 
     private FeeCalculationRequest request(BigDecimal amount, TransactionType type, String from, String to) {
@@ -56,12 +63,13 @@ class FeeCalculationServiceTest {
 
     @Test
     void me2me_crossCurrency_shouldApplySpread() {
-        // 100 USD → BHD at rate 0.377 = 37.700 converted, spread = 37.700 * 0.005 = 0.189
+        // mocked customer rate = 0.379 (market + spread already applied by FxRateService)
+        // commission = 100 * 0.379 * 0.005 = 0.190 (rounded)
         FeeResult result = service.calculateFeeAndTotal(request(new BigDecimal("100.000"), TransactionType.ME2ME_CROSS_CURRENCY, "USD", "BHD"));
 
-        assertEquals(new BigDecimal("0.377"), result.getExchangeRateUsed());
-        assertEquals(new BigDecimal("0.189"), result.getCommissionAmount());
-        assertEquals(new BigDecimal("100.189"), result.getTotalDebit());
+        assertEquals(new BigDecimal("0.379"), result.getExchangeRateUsed());
+        assertEquals(new BigDecimal("0.190"), result.getCommissionAmount());
+        assertEquals(new BigDecimal("100.190"), result.getTotalDebit());
     }
 
     @Test
@@ -73,8 +81,14 @@ class FeeCalculationServiceTest {
 
     @Test
     void unsupportedCurrencyPair_shouldThrow() {
-        assertThrows(IllegalArgumentException.class, () ->
-                service.calculateFeeAndTotal(request(new BigDecimal("100.000"), TransactionType.ME2ME_CROSS_CURRENCY, "XYZ", "ABC"))
+        FxRateService fxMock = mock(FxRateService.class);
+        when(fxMock.getCustomerRate("XYZ", "ABC")).thenThrow(new FxRateUnavailableException("Exchange rate unavailable for XYZ_ABC"));
+        FeeCalculationService s = new FeeCalculationService(fxMock, repository);
+        ReflectionTestUtils.setField(s, "feePercentage", new BigDecimal("0.01"));
+        ReflectionTestUtils.setField(s, "spreadPercentage", new BigDecimal("0.005"));
+
+        assertThrows(FxRateUnavailableException.class, () ->
+                s.calculateFeeAndTotal(request(new BigDecimal("100.000"), TransactionType.ME2ME_CROSS_CURRENCY, "XYZ", "ABC"))
         );
     }
 }

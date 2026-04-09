@@ -61,7 +61,7 @@ public class FeeCalculationService {
                 break;
 
             case ME2ME_CROSS_CURRENCY:
-                exchangeRate = fxRateService.getRate(fromCurrency, toCurrency);
+                exchangeRate = fxRateService.getCustomerRate(fromCurrency, toCurrency);
                 BigDecimal convertedAmount = principal.multiply(exchangeRate).setScale(SCALE, ROUNDING);
                 appliedSpread = spreadPercentage;
                 commission = convertedAmount.multiply(spreadPercentage).setScale(SCALE, ROUNDING);
