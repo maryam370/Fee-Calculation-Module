@@ -3,9 +3,7 @@ package com.example.poc.fee.service;
 import java.math.BigDecimal;
 import java.time.Instant;
 
-/**
- * Holds a cached exchange rate with its expiry timestamp.
- */
+
 class CachedRate {
 
     private final BigDecimal rate;
@@ -19,4 +17,6 @@ class CachedRate {
     BigDecimal getRate() { return rate; }
 
     boolean isExpired() { return Instant.now().isAfter(expiresAt); }
+
+    Instant getExpiresAt() { return expiresAt; }
 }

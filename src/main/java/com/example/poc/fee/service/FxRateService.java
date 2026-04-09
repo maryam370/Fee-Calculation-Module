@@ -48,14 +48,12 @@ public class FxRateService {
         String to = toCurrency.toUpperCase();
         String key = from + "_" + to;
 
-        // Return from cache if still valid
         CachedRate cached = cache.get(key);
         if (cached != null && !cached.isExpired()) {
             log.info("FX cache hit for {}: {}", key, cached.getRate());
             return cached.getRate();
         }
 
-        // Fetch live rate
         try {
             BigDecimal marketRate = fetchFromApi(from, to);
             BigDecimal customerRate = marketRate
@@ -93,5 +91,24 @@ public class FxRateService {
         }
 
         return new BigDecimal(rateObj.toString());
+    }
+
+    /**
+     * Returns cache status for all cached currency pairs.
+     */
+    public Map<String, Object> getCacheStatus() {
+        Map<String, Object> status = new java.util.LinkedHashMap<>();
+        if (cache.isEmpty()) {
+            status.put("message", "Cache is empty — no rates fetched yet");
+            return status;
+        }
+        cache.forEach((key, cached) -> {
+            status.put(key, Map.of(
+                    "rate", cached.getRate(),
+                    "expired", cached.isExpired(),
+                    "expiresAt", cached.getExpiresAt().toString()
+            ));
+        });
+        return status;
     }
 }
